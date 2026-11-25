@@ -1,0 +1,103 @@
+TP4 · Asincronismo e integración con Node.js y TypeScript
+
+Una lista compartida en tiempo real, con WebSocket y Server-Sent Events, integrada con un catálogo externo y tolerante a sus fallos.
+Objetivos
+
+    Construir un servidor con Node.js y TypeScript que integre un servicio externo mediante operaciones asíncronas.
+    Mantener sincronizados a varios clientes conectados al mismo servidor.
+    Elegir el mecanismo de comunicación en tiempo real según lo que necesita cada tipo de cliente.
+    Diseñar y documentar un contrato de mensajes.
+    Tolerar los fallos y las demoras del servicio externo sin afectar al resto de los usuarios.
+
+El problema
+
+Un grupo de amigos tiene que elegir qué comprar para un regalo grupal. En lugar de pasarse links por un chat, cada uno abre la aplicación en su navegador, propone productos del catálogo y vota los que le gustan. En una pantalla compartida, como un televisor o un proyector, se ve el ranking actualizado en vivo.
+
+El catálogo es el de DummyJSON, el mismo servicio externo del TP1. La aplicación no usa base de datos: la lista vive en la memoria del servidor mientras está en ejecución.
+
+Hay dos tipos de clientes:
+
+    Participante: propone, vota y ve los cambios de los demás al instante.
+    Pantalla: solo muestra; nunca envía nada al servidor.
+
+Forma de trabajo
+
+    Repositorio nuevo, independiente del proyecto Java.
+    Servidor en Node.js (versión LTS) con TypeScript. Podés ejecutarlo con Node directamente, con tsx o compilando con tsc.
+    Un mismo servidor, en un único puerto, sirve las páginas, la conexión de los participantes y la de la pantalla.
+    El front es mínimo: HTML, CSS y JavaScript sin framework alcanzan. Se evalúan el servidor y la comunicación; el diseño visual no suma.
+    Para probar, abrí varias pestañas o navegadores apuntando al mismo localhost.
+
+Requisitos de la aplicación
+Participantes
+
+    Para entrar, la persona indica un nombre. Definí qué nombres aceptás: vacíos, repetidos, largo máximo.
+    Al entrar ve el estado completo de la lista, sin esperar a que alguien haga un cambio.
+    Todos ven quiénes están conectados. La lista se actualiza cuando alguien entra o se va, incluso si cierra la pestaña sin avisar.
+
+Proponer productos
+
+    Un participante puede proponer uno o varios productos en una sola acción, indicando sus ids del catálogo, hasta 10 por vez.
+    El servidor obtiene los datos de cada producto desde el catálogo. La lista muestra, como mínimo, título, precio e imagen, y esos datos siempre provienen del servidor, nunca del cliente.
+    Si algunos productos de una propuesta no se pueden agregar, los demás se agregan igual, y quien propuso recibe el motivo de cada fallo. Como mínimo hay que distinguir: producto inexistente, catálogo que no respondió a tiempo y producto que ya estaba en la lista.
+    Los demás participantes no reciben los errores ajenos: solo ven los productos que efectivamente se agregaron.
+
+Votar y quitar
+
+    Cada participante puede votar un producto una sola vez y retirar su voto.
+    La lista se ordena por cantidad de votos.
+    Un producto se puede quitar de la lista. Definí quién puede hacerlo (quien lo propuso, cualquiera, solo si no tiene votos u otra regla) y aplicá esa regla en el servidor.
+
+Pantalla
+
+    Una página separada muestra el ranking y la cantidad de participantes conectados, y se actualiza sola, sin recargar.
+
+Condiciones técnicas
+
+    Comunicación. Los participantes se comunican con el servidor por WebSocket, usando la API WebSocket estándar del navegador: no se admiten Socket.IO ni otras bibliotecas con protocolo propio. La pantalla recibe las novedades por Server-Sent Events, con EventSource.
+    Contrato. Los mensajes son JSON, tienen un tipo y están tipados en TypeScript. Cada mensaje, en ambos sentidos, y cada evento que recibe la pantalla están documentados en el README.
+    El servidor decide. El servidor valida cada mensaje que recibe. Un mensaje inválido (no es JSON, tiene un tipo desconocido, le faltan campos, trae valores fuera de rango o pide una acción no permitida) recibe un error solo a quien lo envió, y nunca hace caer al servidor.
+    Catálogo. Toda consulta al catálogo tiene un tiempo máximo de espera, elegido y justificado por vos. Los productos de una misma propuesta se consultan en simultáneo, no uno después de otro.
+    Sin bloqueos. Mientras se espera al catálogo por la propuesta de alguien, los demás siguen votando y viendo cambios con normalidad.
+    Consistencia. Las acciones simultáneas no dejan la lista en un estado incorrecto. Por ejemplo, si dos participantes proponen el mismo producto al mismo tiempo no se genera un duplicado, y si dos personas votan a la vez se cuentan los dos votos.
+    Conexiones cerradas. Cuando alguien cierra la pestaña, el servidor deja de enviarle mensajes y libera lo que tenía asociado a esa conexión.
+    Configuración. La URL del catálogo y el tiempo máximo de espera se configuran sin modificar el código, por ejemplo con variables de entorno. También tiene que haber una forma de simular un catálogo lento sin modificar el código.
+
+Simular un catálogo lento
+
+DummyJSON acepta el parámetro delay, en milisegundos, para demorar su respuesta. Por ejemplo, https://dummyjson.com/products/1?delay=3000 responde después de tres segundos.
+Cómo la vamos a probar
+
+Con el servidor en ejecución, abrimos tres participantes y una pantalla, y comprobamos que:
+
+    quien entra tarde ve la lista completa y a los demás participantes conectados;
+    una propuesta con varios ids, uno de ellos inexistente, agrega los válidos e informa el fallo solo a quien la hizo;
+    con el catálogo lento, quien propone espera su resultado mientras los demás siguen votando;
+    dos propuestas del mismo producto, o dos votos, hechos casi al mismo tiempo dejan la lista correcta;
+    al cerrar una pestaña, los demás y la pantalla ven un participante menos;
+    un mensaje inválido enviado desde la consola del navegador recibe un error y el servidor sigue funcionando;
+    la pantalla se mantiene al día sin recargar.
+
+README
+
+Además de cómo instalar y ejecutar el proyecto, el README debe incluir:
+
+    el contrato de mensajes: cada tipo, su dirección, sus campos y cuándo se envía;
+    las decisiones que tomaste: qué nombres se aceptan, qué pasa con un producto repetido, quién puede quitar productos y qué tiempo máximo de espera elegiste para el catálogo, y por qué;
+    qué ve cada usuario cuando el catálogo falla o tarda;
+    por qué los participantes usan WebSocket y la pantalla usa SSE, y qué cambiaría si la pantalla usara polling.
+
+Evidencia esperada
+
+    Repositorio con el proyecto y el README.
+    Un video corto o un GIF con al menos tres participantes y la pantalla sincronizados.
+    Capturas de una propuesta con fallos parciales, del comportamiento con el catálogo lento y de la respuesta a un mensaje inválido.
+
+Opcionales
+
+    Reconexión automática del participante, que recupere su nombre y el estado de la lista.
+    Detección de conexiones muertas con ping y pong.
+    Varias listas independientes, cada una con un código para unirse.
+    Conexión desde otro dispositivo de la misma red.
+    Pruebas automatizadas de la validación de mensajes, con node:test u otra herramienta.
+

@@ -1,3 +1,4 @@
+
 import type { Product } from "../../domain/entities/Product";
 import type { CatalogProvider } from "../ports/CatalogProvider";
 import { CatalogError } from "../errors/CatalogError";
@@ -13,15 +14,19 @@ export type ProductProposalFailureReason =
     | "unavailable";
 
 export interface ProductProposalFailure {
-    id: number;
+    productId: number;
     reason: ProductProposalFailureReason;
 }
 
 export interface ProductProposalResult {
     success: boolean;
-    added: number;
+    added: number[];
     failed: ProductProposalFailure[];
 }
+
+type ProductProposalItemResult =
+    | { success: true; productId: number }
+    | { success: false; failure: ProductProposalFailure };
 
 export type ProductRemovalResult =
     | "removed"
@@ -42,56 +47,75 @@ export class ProductService {
         participantId: string,
         productIds: number[]
     ): Promise<ProductProposalResult> {
-        const results = await Promise.all(
-            productIds.map(async (id) => {
-                if (
-                    this.productRepository.findById(id) ||
-                    this.pendingProductIds.has(id)
-                ) {
-                    return { id, reason: "duplicate" as const };
-                }
-
-                this.pendingProductIds.add(id);
-
-                try {
-                    const catalogProduct =
-                        await this.catalogProvider.findById(id);
-
-                    const product: Product = {
-                        ...catalogProduct,
-                        proposedBy: participantId
-                    };
-
-                    this.productRepository.save(product);
-
-                    return null;
-                } catch (error) {
-                    if (error instanceof CatalogError) {
-                        const reason: ProductProposalFailureReason =
-                            error.code === "NOT_FOUND"
-                                ? "not_found"
-                                : error.code === "TIMEOUT"
-                                    ? "timeout"
-                                    : "unavailable";
-
-                        return { id, reason };
+        const results: ProductProposalItemResult[] = await Promise.all(
+            productIds.map(
+                async (id): Promise<ProductProposalItemResult> => {
+                    if (
+                        this.productRepository.findById(id) ||
+                        this.pendingProductIds.has(id)
+                    ) {
+                        return {
+                            success: false,
+                            failure: {
+                                productId: id,
+                                reason: "duplicate"
+                            }
+                        };
                     }
 
-                    throw error;
-                } finally {
-                    this.pendingProductIds.delete(id);
+                    this.pendingProductIds.add(id);
+
+                    try {
+                        const catalogProduct =
+                            await this.catalogProvider.findById(id);
+
+                        const product: Product = {
+                            ...catalogProduct,
+                            proposedBy: participantId
+                        };
+
+                        this.productRepository.save(product);
+
+                        return {
+                            success: true,
+                            productId: id
+                        };
+                    } catch (error) {
+                        if (error instanceof CatalogError) {
+                            const reason: ProductProposalFailureReason =
+                                error.code === "NOT_FOUND"
+                                    ? "not_found"
+                                    : error.code === "TIMEOUT"
+                                        ? "timeout"
+                                        : "unavailable";
+
+                            return {
+                                success: false,
+                                failure: {
+                                    productId: id,
+                                    reason
+                                }
+                            };
+                        }
+
+                        throw error;
+                    } finally {
+                        this.pendingProductIds.delete(id);
+                    }
                 }
-            })
+            )
         );
 
-        const failed = results.filter(
-            (result): result is ProductProposalFailure => result !== null
-        );
+        const added = results
+            .filter(result => result.success)
+            .map(result => result.productId);
 
-        const added = results.length - failed.length;
+        const failed = results
+            .filter(result => !result.success)
+            .map(result => result.failure);
 
         return {
-            success: added > 0,
+            success: added.length > 0,
             added,
             failed
         };

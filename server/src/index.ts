@@ -1,53 +1,124 @@
-
 import "dotenv/config";
+
 import express from "express";
 import { createServer } from "node:http";
-import { WebSocketServer } from "ws";
 
+import { env } from "./config/env";
+
+// Domain
+import type { AppState } from "./domain/state/AppState";
+
+// Repositories
+import { MemoryParticipantRepository } from "./infrastructure/repositories/MemoryParticipantRepository";
+import { MemoryProductRepository } from "./infrastructure/repositories/MemoryProductRepository";
+import { MemoryVoteRepository } from "./infrastructure/repositories/MemoryVoteRepository";
+
+// Catalog
+import { DummyJsonCatalogProvider } from "./infrastructure/catalog/DummyJsonCatalogProvider";
+
+// Application services
+import { ParticipantService } from "./application/services/ParticipantService";
+import { ProductService } from "./application/services/ProductService";
+import { VoteService } from "./application/services/VoteService";
+
+// HTTP
+import HealthRoutes from "./interfaces/http/HealthRoutes";
+
+// SSE
+import { SSEBroadcaster } from "./interfaces/sse/SSEBroadcaster";
+import { SSEConnectionHandler } from "./interfaces/sse/SSEConnectionHandler";
+
+// WebSocket
+import { WebSocketBroadcaster } from "./interfaces/websocket/WebSocketBroadcaster";
+import { WebSocketConnectionHandler } from "./interfaces/websocket/WebSocketConnectionHandler";
+import { WebSocketMessageHandler } from "./interfaces/websocket/WebSocketMessageHandler";
+import { WebSocketMessageValidator } from "./interfaces/websocket/WebSocketMessageValidator";
+import { WebSocketServer } from "./interfaces/websocket/WebSocketServer";
+
+// Application setup
 const app = express();
 const server = createServer(app);
 
-const PORT = Number(process.env.PORT) || 3000;
+app.use(express.json());
 
-// HTTP
-app.get("/health", (_req, res) => {
-    res.json({ status: "ok" });
-});
+// Shared state
+const state: AppState = {
+    participants: new Map(),
+    products: new Map(),
+    votes: []
+};
 
-// WebSocket
-const wss = new WebSocketServer({
-    server,
-    path: "/ws",
-});
+// Repositories
+const participantRepository = new MemoryParticipantRepository(state);
+const productRepository = new MemoryProductRepository(state);
+const voteRepository = new MemoryVoteRepository(state);
 
-wss.on("connection", (socket) => {
-    console.log("Participante conectado");
+// Catalog
+const catalogProvider = new DummyJsonCatalogProvider();
 
-    socket.send(
-        JSON.stringify({
-        type: "welcome",
-        message: "WebSocket conectado correctamente",
-        })
-    );
+// Application services
+const participantService = new ParticipantService(
+    participantRepository
+);
 
-    socket.on("close", () => {
-        console.log("Participante desconectado");
-    });
-});
+const productService = new ProductService(
+    catalogProvider,
+    productRepository,
+    participantRepository,
+    voteRepository
+);
+
+const voteService = new VoteService(
+    voteRepository,
+    productRepository,
+    participantRepository
+);
 
 // SSE
-app.get("/events", (_req, res) => {
-    res.setHeader("Content-Type", "text/event-stream");
-    res.setHeader("Cache-Control", "no-cache");
-    res.setHeader("Connection", "keep-alive");
+const sseBroadcaster = new SSEBroadcaster(
+    participantRepository,
+    productRepository,
+    voteRepository
+);
 
-    res.write(
-        `event: connected\ndata: ${JSON.stringify({
-        message: "SSE conectado correctamente",
-        })}\n\n`
-    );
-});
+const sseConnectionHandler = new SSEConnectionHandler(
+    sseBroadcaster
+);
 
-server.listen(PORT, () => {
-    console.log(`Servidor escuchando en http://localhost:${PORT}`);
+// WebSocket
+const webSocketBroadcaster = new WebSocketBroadcaster(
+    participantRepository,
+    productRepository,
+    voteRepository
+);
+
+const webSocketValidator = new WebSocketMessageValidator();
+
+const webSocketMessageHandler = new WebSocketMessageHandler(
+    participantService,
+    productService,
+    voteService,
+    webSocketValidator,
+    webSocketBroadcaster
+);
+
+const webSocketConnectionHandler = new WebSocketConnectionHandler(
+    participantService,
+    webSocketMessageHandler,
+    webSocketBroadcaster
+);
+
+// Register interfaces
+app.use(HealthRoutes);
+
+sseConnectionHandler.register(app);
+
+new WebSocketServer(
+    server,
+    webSocketConnectionHandler
+);
+
+// Start server
+server.listen(env.port, () => {
+    console.log(`Server listening on http://localhost:${env.port}`);
 });

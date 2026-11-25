@@ -11,6 +11,7 @@ export type VoteResult =
 
 export type RemoveVoteResult =
     | "removed"
+    | "not_changed"
     | "not_found"
     | "not_authorized";
 
@@ -70,8 +71,11 @@ export class VoteService {
             return "not_found";
         }
 
-        this.voteRepository.delete(participantId, productId);
+        const removed = this.voteRepository.delete(
+            participantId,
+            productId
+        );
 
-        return "removed";
+        return removed ? "removed" : "not_changed";
     }
 }

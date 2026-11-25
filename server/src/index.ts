@@ -99,13 +99,15 @@ const webSocketMessageHandler = new WebSocketMessageHandler(
     productService,
     voteService,
     webSocketValidator,
-    webSocketBroadcaster
+    webSocketBroadcaster,
+    sseBroadcaster
 );
 
 const webSocketConnectionHandler = new WebSocketConnectionHandler(
     participantService,
     webSocketMessageHandler,
-    webSocketBroadcaster
+    webSocketBroadcaster,
+    sseBroadcaster
 );
 
 // Register interfaces

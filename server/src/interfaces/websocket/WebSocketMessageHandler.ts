@@ -1,3 +1,4 @@
+
 import type { WebSocket } from "ws";
 import type { RawData } from "ws";
 
@@ -10,6 +11,7 @@ import { ParticipantError } from "../../application/errors/ParticipantError";
 import type { WebSocketConnectionContext } from "./WebSocketConnectionHandler";
 import type { WebSocketMessageValidator } from "./WebSocketMessageValidator";
 import type { WebSocketBroadcaster } from "./WebSocketBroadcaster";
+import type { SSEBroadcaster } from "../sse/SSEBroadcaster";
 
 export class WebSocketMessageHandler {
     constructor(
@@ -17,7 +19,8 @@ export class WebSocketMessageHandler {
         private readonly productService: ProductService,
         private readonly voteService: VoteService,
         private readonly validator: WebSocketMessageValidator,
-        private readonly broadcaster: WebSocketBroadcaster
+        private readonly broadcaster: WebSocketBroadcaster,
+        private readonly sseBroadcaster: SSEBroadcaster
     ) {}
 
     async handleMessage(
@@ -60,7 +63,7 @@ export class WebSocketMessageHandler {
                     context.participantId = participant.id;
 
                     this.broadcaster.sendInitialState(socket, participant.id);
-                    this.broadcaster.broadcastState(socket);
+                    this.broadcastState(socket);
                     break;
                 }
 
@@ -80,7 +83,7 @@ export class WebSocketMessageHandler {
                     }
 
                     this.sendActionResult(socket, "change_name", true);
-                    this.broadcaster.broadcastState();
+                    this.broadcastState();
                     break;
                 }
 
@@ -101,7 +104,7 @@ export class WebSocketMessageHandler {
                     );
 
                     if (result.added.length > 0) {
-                        this.broadcaster.broadcastState();
+                        this.broadcastState();
                     }
                     break;
                 }
@@ -126,7 +129,7 @@ export class WebSocketMessageHandler {
                     }
 
                     this.sendActionResult(socket, "vote", true);
-                    this.broadcaster.broadcastState();
+                    this.broadcastState();
                     break;
                 }
 
@@ -153,7 +156,7 @@ export class WebSocketMessageHandler {
                     this.sendActionResult(socket, "remove_vote", true);
 
                     if (result === "removed") {
-                        this.broadcaster.broadcastState();
+                        this.broadcastState();
                     }
                     break;
                 }
@@ -176,7 +179,7 @@ export class WebSocketMessageHandler {
                     }
 
                     this.sendActionResult(socket, "remove_product", true);
-                    this.broadcaster.broadcastState();
+                    this.broadcastState();
                     break;
                 }
             }
@@ -194,6 +197,11 @@ export class WebSocketMessageHandler {
                 "An unexpected server error occurred."
             );
         }
+    }
+
+    private broadcastState(exclude?: WebSocket): void {
+        this.broadcaster.broadcastState(exclude);
+        this.sseBroadcaster.broadcastState();
     }
 
     private sendActionResult(

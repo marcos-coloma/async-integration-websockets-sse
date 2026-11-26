@@ -48,6 +48,16 @@ export function ParticipantsPage({
             ? lastActionResult
             : null;
 
+    const proposalHasPartialFailures = Boolean(
+        proposalResult?.added?.length && proposalResult.failed?.length
+    );
+
+    const proposalFeedbackClass = proposalHasPartialFailures
+        ? "feedback-warning"
+        : proposalResult?.success
+            ? "feedback-success"
+            : "";
+
     return (
         <main className="participants-page">
             <div className="page-shell">
@@ -112,11 +122,7 @@ export function ParticipantsPage({
 
                         {proposalResult && (
                             <section
-                                className={`feedback ${
-                                    proposalResult.success
-                                        ? "feedback-success"
-                                        : ""
-                                }`}
+                                className={`feedback ${proposalFeedbackClass}`}
                             >
                                 <p className="feedback-title">
                                     Proposal result

@@ -45,6 +45,9 @@
   --success-border: #BBF7D0;
   --success-ring: rgba(21, 128, 61, 0.12);
   --warning: #D97706;
+  --warning-text: #92400E;
+  --warning-bg: #FFFBEB;
+  --warning-border: #FDE68A;
   --offline: #A89B8A;
 
   --danger: #B91C1C;

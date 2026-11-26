@@ -1,6 +1,7 @@
 
 import { useWebSockets } from "./hooks/useWebSockets";
 import { JoinPage } from "./pages/JoinPage";
+import { ParticipantsPage } from "./pages/ParticipantsPage";
 
 function App() {
     const websocket = useWebSockets();
@@ -9,17 +10,21 @@ function App() {
         return (
             <JoinPage
                 status={websocket.status}
-                error={websocket.lastError?.message ?? websocket.connectionError}
+                error={
+                    websocket.lastError?.message ??
+                    websocket.connectionError
+                }
                 onJoin={websocket.join}
             />
         );
     }
 
     return (
-        <main>
-            <h1>Real-time Collaboration</h1>
-            <p>Connected as participant: {websocket.participantId}</p>
-        </main>
+        <ParticipantsPage
+            participantId={websocket.participantId}
+            participants={websocket.sharedState.participants}
+            status={websocket.status}
+        />
     );
 }
 

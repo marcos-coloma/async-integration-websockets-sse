@@ -1,6 +1,4 @@
-
 import { beforeEach, describe, expect, it } from "vitest";
-
 import { ProductService } from "../../src/application/services/ProductService";
 import { CatalogError } from "../../src/application/errors/CatalogError";
 import type { CatalogProduct, CatalogProvider } from "../../src/application/ports/CatalogProvider";

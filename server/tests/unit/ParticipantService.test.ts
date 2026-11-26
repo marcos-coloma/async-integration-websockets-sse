@@ -1,4 +1,3 @@
-
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { ParticipantService } from "../../src/application/services/ParticipantService";

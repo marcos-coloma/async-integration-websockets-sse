@@ -1,6 +1,4 @@
-
 import { beforeEach, describe, expect, it } from "vitest";
-
 import { VoteService } from "../../src/application/services/VoteService";
 import type { AppState } from "../../src/domain/state/AppState";
 import { MemoryVoteRepository } from "../../src/infrastructure/repositories/MemoryVoteRepository";

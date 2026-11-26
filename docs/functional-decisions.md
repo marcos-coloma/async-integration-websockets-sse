@@ -1,146 +1,74 @@
 # Decisiones funcionales — TP4 Node.js
 
-Este documento registra las decisiones funcionales acordadas para el desarrollo del TP4.
+Este documento registra las reglas funcionales acordadas y su estado actual. Los puntos indicados como pendientes no se consideran implementados.
 
-Está destinado a una IA que colaborará en el diseño, implementación y revisión del proyecto.
+## 1. Nombres de participantes
 
-**Instrucción:** respetar estas decisiones. No asumir respuestas para los puntos pendientes ni modificar estas reglas sin consultar primero.
+- Se quitan los espacios al principio y al final.
+- Se aceptan nombres de 1 a 20 caracteres después de normalizarlos.
+- Los nombres deben ser únicos entre participantes conectados. La comparación no distingue mayúsculas de minúsculas.
+- La misma regla se aplica al ingresar y al cambiar el nombre.
 
-## 1. Desconexión de participantes y votos
+## 2. Desconexión de participantes y votos
 
-**Decisión: B — Los votos se conservan.**
+Cuando un participante se desconecta, se elimina de la colección de participantes conectados, pero sus votos se conservan hasta que finalice la sesión. La desconexión no elimina sus productos.
 
-Cuando un participante se desconecta:
-- Se elimina de la colección de participantes conectados.
-- Sus votos permanecen en la sesión.
-- Sus votos se conservan hasta que finalice la sesión.
+## 3. Productos propuestos por participantes desconectados
 
-La desconexión no implica que el participante haya abandonado su decisión.
-
-## 2. Productos propuestos por participantes desconectados
-
-**Decisión: B — Cualquier participante puede eliminarlos.**
-
-- Mientras el proponente esté conectado, solamente él puede eliminar el producto.
+- Mientras el proponente esté conectado, solo él puede eliminar el producto.
 - Si el proponente se desconecta, cualquier participante conectado puede eliminarlo.
-- El producto no se elimina automáticamente cuando su proponente se desconecta.
+- Al quitar un producto, se eliminan también todos sus votos.
 
-## 3. Reconexión de participantes
+## 4. Reconexión
 
-**Decisión: B — Se recupera la identidad anterior.**
+La decisión funcional es que una persona que vuelve recupere su identidad y sus votos. **No está implementado todavía:** falta definir un mecanismo seguro para reconocerla entre conexiones. El estado actual crea un ID para cada ingreso y no recupera la identidad al reconectar.
 
-Cuando un participante vuelve a conectarse:
-- Recupera su identidad anterior.
-- Conserva sus votos.
-- No debe crearse como un participante completamente nuevo.
+## 5. Representación de votos
 
-**Pendiente de diseño:** definir el mecanismo que permitirá reconocer al participante después de una desconexión.
+Los votos se representan como registros individuales con `participantId` y `productId`. Cada participante puede registrar un solo voto por producto.
 
-No asumir que basta con conservar el ID generado durante la conexión anterior: debe existir una forma de recuperarlo de manera segura.
+## 6. Contenido de `state_update`
 
-## 4. Representación de los votos
+Cada actualización incluye el estado completo: participantes conectados, productos y votos. No se envían deltas.
 
-**Decisión: A — Registros individuales.**
+## 7. Resultado de propuestas parciales
 
+Una propuesta se considera exitosa si se agregó al menos un producto. `added` contiene los IDs agregados y `failed` informa cada ID que falló y su motivo. Los fallos posibles son `not_found`, `timeout`, `duplicate` y `unavailable`.
 
-## 5. Contenido de `state_update`
+Las consultas de una propuesta se realizan en paralelo. Un mismo producto no se agrega dos veces, incluso si otra propuesta concurrente ya lo está consultando.
 
-**Decisión: A — Estado completo.**
+## 8. Acciones antes de ingresar y segundo `join`
 
-Cada mensaje `state_update` debe contener el estado completo y actualizado de la aplicación:
-- Participantes conectados.
-- Productos incorporados.
-- Votos registrados.
+Las acciones distintas de `join` se rechazan con `NOT_AUTHORIZED` antes del ingreso, pero la conexión permanece abierta. Un segundo `join` en la misma conexión también se rechaza sin cerrar la conexión.
 
-No se enviarán únicamente los datos que cambiaron.
+## 9. Cambio de nombre
 
-Esto permite que los clientes mantengan su representación sincronizada con la fuente de verdad del servidor.
+El nombre se cambia con el mensaje independiente `change_name`. El servidor valida las mismas reglas de longitud y unicidad que en `join`, actualiza el participante y distribuye el estado nuevo.
 
-## 6. Resultado de propuestas parciales
+## 10. Retirar un voto inexistente
 
-**Decisión: A — Éxito si se incorporó al menos un producto.**
+Retirar un voto inexistente sobre un producto válido es una operación idempotente: se acepta, no cambia el estado y no produce una actualización de estado. Si el producto no existe, el servidor devuelve `NOT_FOUND`.
 
-Cuando una propuesta contiene varios productos:
-- Si se incorpora al menos uno, `success` será `true`.
-- Los productos que no pudieron incorporarse se informarán en `failed`.
-- Si no se incorpora ninguno, `success` será `false`.
+## Resumen del estado
 
-Ejemplo: se solicitan tres productos, se incorporan dos y uno falla. La operación se considera exitosa parcialmente.
+| Tema | Decisión o estado |
+|---|---|
+| Nombres | 1–20 caracteres tras quitar espacios exteriores; únicos entre conectados, sin distinguir mayúsculas |
+| Votos al desconectarse | Se conservan |
+| Productos de proponentes desconectados | Cualquier participante conectado puede eliminarlos |
+| Reconexión | Recuperar identidad; mecanismo pendiente y funcionalidad no implementada |
+| Representación de votos | Registros individuales |
+| `state_update` | Estado completo |
+| Éxito parcial | `true` si se agregó al menos uno |
+| Acciones antes de `join` | Rechazar y mantener conexión abierta |
+| Cambio de nombre | Mensaje independiente `change_name` |
+| Retirar voto inexistente | Aceptar sin cambiar ni emitir actualización |
+| Eliminar producto | Eliminar también sus votos |
 
-## 7. Acciones antes de ingresar
+## Criterios de implementación
 
-**Decisión: A — Rechazar sin cerrar la conexión.**
-
-Si un cliente intenta ejecutar una acción antes de enviar correctamente `join`:
-- El servidor rechaza la operación.
-- Devuelve un error `NOT_AUTHORIZED`.
-- Mantiene abierta la conexión WebSocket.
-
-El cliente puede completar el ingreso posteriormente.
-
-## 8. Cambio de nombre y segundo `join`
-
-**Decisión: permitir cambiar el nombre mediante una operación independiente.**
-
-- Un segundo mensaje `join` en la misma conexión debe rechazarse.
-- El cambio de nombre se realiza mediante un nuevo mensaje `change_name`.
-- El servidor identifica al participante utilizando la conexión WebSocket.
-- El servidor actualiza el nombre y notifica el cambio al resto de los clientes.
-
-Ejemplo de mensaje:
-
-```json
-{
-  "type": "change_name",
-  "name": "Nuevo nombre"
-}
-```
-
-`change_name` todavía debe incorporarse formalmente al protocolo y contemplarse en la validación y los casos de uso.
-
-## 9. Retirar un voto inexistente
-
-**Decisión: B — Operación idempotente.**
-
-Si un participante intenta retirar un voto que no existe:
-- La operación se acepta.
-- No se modifica el estado.
-- No se devuelve un error por la ausencia del voto.
-
-## 10. Eliminación de productos y sus votos
-
-**Decisión: A — Eliminar también los votos asociados.**
-
-Cuando se elimina un producto:
-- Se elimina el producto de la lista compartida.
-- Se eliminan todos los votos asociados a ese producto.
-
-No deben quedar votos que hagan referencia a productos inexistentes.
-
----
-
-## Resumen de decisiones
-
-| N.º | Tema | Decisión |
-|---|---|---|
-| 1 | Votos al desconectarse | Se conservan |
-| 2 | Productos de proponentes desconectados | Cualquier participante puede eliminarlos |
-| 3 | Reconexión | Recupera identidad y votos |
-| 4 | Representación de votos | Pendiente |
-| 5 | `state_update` | Estado completo |
-| 6 | Éxito parcial | `true` si se agregó al menos uno |
-| 7 | Acciones antes de `join` | Rechazar y mantener conexión |
-| 8 | Cambio de nombre | Mensaje independiente `change_name` |
-| 9 | Retirar voto inexistente | Operación idempotente |
-| 10 | Eliminar producto | Eliminar también sus votos |
-
-## Consideraciones para el desarrollo
-
-1. Mantener el servidor como única fuente de verdad.
+1. Mantener al servidor como única fuente de verdad.
 2. Respetar la separación entre dominio, aplicación, infraestructura e interfaces.
-3. No introducir persistencia en base de datos: el estado continúa siendo en memoria.
-4. Mantener sincronizados los participantes conectados, productos y votos.
-5. Reflejar las decisiones en `data-model.md`, `protocol.md` y `architecture.md` cuando corresponda.
-6. No implementar funcionalidades adicionales por iniciativa propia sin evaluar primero su impacto en la consigna y consultar cuando impliquen nuevas decisiones funcionales.
-
-
+3. Mantener el estado en memoria, sin base de datos.
+4. Mantener sincronizados participantes conectados, productos y votos.
+5. Reflejar las reglas implementadas en `protocol.md` y `data-model.md`.

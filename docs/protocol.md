@@ -1,141 +1,86 @@
 # Protocolo de comunicación
 
-## 1. Descripción general
+## Transporte
 
-La aplicación utiliza dos mecanismos de comunicación para intercambiar información en tiempo real entre el servidor y sus clientes.
+Los participantes se conectan al servidor por WebSocket en `/ws`. La pantalla compartida usa Server-Sent Events (SSE) en `GET /events`. Los mensajes y los datos de los eventos se serializan como JSON. El servidor mantiene la fuente de verdad y envía el estado completo en cada actualización.
 
-| Protocolo | Comunicación | Propósito |
-|---|---|---|
-| WebSocket | Bidireccional | Interacción entre participantes y servidor. |
-| SSE (Server-Sent Events) | Unidireccional | Actualizaciones en tiempo real para la pantalla. |
+## Mensajes WebSocket: cliente a servidor
 
-Ambos mecanismos utilizan JSON para intercambiar información estructurada.
+Todos los mensajes deben ser objetos JSON con un campo `type`. El servidor valida cada mensaje. Los identificadores de producto deben ser enteros positivos.
 
-## 2. WebSocket
+### `join`
 
-Se utiliza para la comunicación entre los participantes y el servidor.
-
-Permite que los participantes envíen acciones y reciban respuestas, errores y actualizaciones generadas por otros participantes.
-
-### 2.1. Mensajes del cliente al servidor
-
-Todos los mensajes deben contener un campo `type` que identifique la acción solicitada.
-
-#### Ingresar (`join`)
-
-Registra a un participante en la sesión compartida.
+Registra al participante en la conexión actual.
 
 ```json
-{
-  "type": "join",
-  "name": "Marcos"
-}
+{ "type": "join", "name": "Marcos" }
 ```
 
-| Campo | Tipo | Descripción |
-|---|---|---|
-| type | string | Tipo de mensaje: `join`. |
-| name | string | Nombre visible del participante. |
+`name` debe tener entre 1 y 20 caracteres después de quitar espacios al principio y al final. Los nombres deben ser únicos entre quienes están conectados; la comparación no distingue mayúsculas de minúsculas. El servidor asigna el ID.
 
-El servidor valida el nombre, genera un identificador único y lo asocia a la conexión WebSocket.
+Un segundo `join` en la misma conexión se rechaza. Las acciones distintas de `join` requieren que el participante haya ingresado. Estos rechazos no cierran la conexión.
 
-#### Proponer productos (`propose_products`)
+### `change_name`
 
-Solicita incorporar uno o varios productos del catálogo DummyJSON a la lista compartida.
+Cambia el nombre del participante de la conexión actual. `name` usa las mismas reglas de longitud y unicidad que en `join`.
 
 ```json
-{
-  "type": "propose_products",
-  "productIds": [1, 5, 12]
-}
+{ "type": "change_name", "name": "Nuevo nombre" }
 ```
 
-| Campo | Tipo | Descripción |
-|---|---|---|
-| type | string | Tipo de mensaje: `propose_products`. |
-| productIds | number[] | Identificadores de los productos que se desean incorporar. |
+### `propose_products`
 
-Cada propuesta puede contener entre 1 y 10 identificadores.
-
-El servidor consulta los productos en paralelo. Si algunas consultas fallan, incorpora los productos válidos e informa los fallos únicamente al participante que realizó la propuesta.
-
-#### Votar (`vote`)
-
-Registra el voto de un participante sobre un producto.
+Solicita agregar entre 1 y 10 productos. El servidor consulta el catálogo en paralelo; los datos incorporados provienen del catálogo, no del mensaje del cliente.
 
 ```json
-{
-  "type": "vote",
-  "productId": 5
-}
+{ "type": "propose_products", "productIds": [1, 5, 12] }
 ```
 
-| Campo | Tipo | Descripción |
-|---|---|---|
-| type | string | Tipo de mensaje: `vote`. |
-| productId | number | Identificador del producto que se desea votar. |
+Un producto existente o que ya está siendo agregado se informa como duplicado. Esto incluye IDs repetidos en el mismo pedido y propuestas concurrentes. Los fallos se reportan individualmente; los productos válidos pueden agregarse aunque otros fallen.
 
-Cada participante puede votar una sola vez por producto.
+### `vote`
 
-#### Retirar voto (`remove_vote`)
-
-Retira el voto del participante sobre un producto.
+Registra un voto. Cada participante puede votar una vez por producto.
 
 ```json
-{
-  "type": "remove_vote",
-  "productId": 5
-}
+{ "type": "vote", "productId": 5 }
 ```
 
-| Campo | Tipo | Descripción |
-|---|---|---|
-| type | string | Tipo de mensaje: `remove_vote`. |
-| productId | number | Identificador del producto. |
+### `remove_vote`
 
-Cada participante únicamente puede retirar sus propios votos.
-
-#### Eliminar producto (`remove_product`)
-
-Solicita eliminar un producto de la lista compartida.
+Retira el voto del participante sobre el producto indicado. La operación es idempotente: si no había voto, se acepta sin cambiar el estado.
 
 ```json
-{
-  "type": "remove_product",
-  "productId": 5
-}
+{ "type": "remove_vote", "productId": 5 }
 ```
 
-| Campo | Tipo | Descripción |
-|---|---|---|
-| type | string | Tipo de mensaje: `remove_product`. |
-| productId | number | Identificador del producto que se desea eliminar. |
+### `remove_product`
 
-Solo el participante que propuso originalmente el producto puede eliminarlo.
+Elimina un producto de la lista y también elimina sus votos asociados. Si quien lo propuso sigue conectado, solo esa persona puede quitarlo. Si ya se desconectó, cualquier participante conectado puede hacerlo.
 
-### 2.2. Mensajes del servidor al cliente
+```json
+{ "type": "remove_product", "productId": 5 }
+```
 
-El servidor envía mensajes a los participantes mediante sus conexiones WebSocket.
+## Mensajes WebSocket: servidor a participantes
 
-#### Estado inicial (`initial_state`)
+### `initial_state`
 
-Se envía cuando un participante ingresa correctamente a la sesión.
+Se envía al participante después de un `join` válido. Incluye el ID generado para esa conexión y el estado completo.
 
 ```json
 {
   "type": "initial_state",
-  "participantId": "user-123",
-  "participants": [],
+  "participantId": "uuid",
+  "participants": [{ "id": "uuid", "name": "Marcos" }],
   "products": [],
   "votes": []
 }
 ```
 
-Contiene el estado completo y actual de la aplicación, incluyendo el identificador asignado al participante, los participantes conectados, los productos y los votos.
+### `state_update`
 
-#### Actualización del estado (`state_update`)
-
-Se envía cuando ocurre un cambio relevante en la sesión compartida.
+Se envía a los participantes conectados cuando cambia el estado. Contiene siempre las colecciones completas de participantes, productos y votos. Quien acaba de ingresar recibe `initial_state` en lugar de un `state_update` duplicado.
 
 ```json
 {
@@ -146,146 +91,74 @@ Se envía cuando ocurre un cambio relevante en la sesión compartida.
 }
 ```
 
-Contiene el estado actualizado para sincronizar la interfaz de los participantes.
+### `action_result`
 
-#### Resultado de una acción (`action_result`)
-
-Se envía al participante que realizó una acción cuando es necesario informarle su resultado.
-
-Ejemplo de una propuesta con fallos parciales:
+Confirma una acción al participante que la solicitó. Se usa para `change_name`, `propose_products`, `vote`, `remove_vote` y `remove_product`.
 
 ```json
 {
   "type": "action_result",
   "action": "propose_products",
-  "success": false,
+  "success": true,
   "added": [1, 5],
-  "failed": [
-    {
-      "productId": 12,
-      "reason": "not_found"
-    }
-  ]
+  "failed": [{ "productId": 12, "reason": "not_found" }]
 }
 ```
 
-Informa qué productos se incorporaron correctamente y cuáles no pudieron agregarse, junto con el motivo correspondiente.
+En una propuesta, `success` es `true` si se agregó al menos un producto. `added` contiene los IDs agregados y `failed` los fallidos. Los motivos posibles son `not_found`, `timeout`, `duplicate` y `unavailable`. Los fallos de una propuesta solo se envían a quien la realizó.
 
-Los posibles motivos de fallo de una propuesta incluyen:
+Retirar un voto inexistente produce `action_result` con éxito, pero no genera una actualización del estado porque nada cambió.
 
-- `not_found`: el producto no existe en el catálogo.
-- `timeout`: el catálogo no respondió dentro del tiempo establecido.
-- `duplicate`: el producto ya se encuentra en la lista compartida.
+### `error`
 
-Los errores de una propuesta se comunican únicamente a quien la realizó.
+Se envía solo al cliente que originó el error. Los códigos que puede recibir son:
 
-#### Error (`error`)
+| Código | Significado |
+|---|---|
+| `INVALID_JSON` | El contenido no se puede interpretar como JSON. |
+| `INVALID_MESSAGE` | El mensaje no es un objeto con un campo `type` de texto. |
+| `UNKNOWN_MESSAGE` | El tipo de mensaje no está reconocido. |
+| `INVALID_FIELDS` | Faltan campos o sus valores no cumplen el formato esperado. |
+| `NOT_AUTHORIZED` | Falta ingresar, se repitió `join` o la acción no está permitida. |
+| `NAME_TAKEN` | Ya hay un participante conectado con ese nombre, sin distinguir mayúsculas. |
+| `NOT_FOUND` | El producto no existe en la lista para la acción solicitada. |
+| `DUPLICATE_VOTE` | El participante ya votó por ese producto. |
+| `INTERNAL_ERROR` | Ocurrió un error inesperado al procesar el mensaje. |
 
-Se envía exclusivamente al participante que generó un mensaje inválido o solicitó una acción no permitida.
+Ejemplo:
 
 ```json
-{
-  "type": "error",
-  "code": "INVALID_MESSAGE",
-  "message": "Formato de mensaje inválido."
-}
+{ "type": "error", "code": "INVALID_FIELDS", "message": "Message contains missing or invalid fields." }
 ```
 
-Los posibles códigos incluyen:
+Los errores del catálogo durante una propuesta se informan en `failed`, no como `error` general.
 
-- `INVALID_MESSAGE`: formato JSON o estructura del mensaje inválida.
-- `UNKNOWN_MESSAGE_TYPE`: tipo de mensaje desconocido.
-- `INVALID_FIELD`: campo faltante o valor inválido.
-- `NOT_AUTHORIZED`: acción no permitida para el participante.
-- `NOT_FOUND`: producto inexistente en la lista compartida.
-- `DUPLICATE_VOTE`: el participante ya votó por ese producto.
+## Eventos SSE: servidor a pantalla
 
-Los errores no deben interrumpir el funcionamiento del servidor ni afectar a los demás participantes.
+La conexión se abre con `GET /events` y responde con `Content-Type: text/event-stream`. SSE es unidireccional: la pantalla no envía acciones.
 
-## 3. Server-Sent Events (SSE)
+### `initial_state`
 
-Se utiliza para transmitir actualizaciones desde el servidor hacia la pantalla compartida.
-
-La pantalla establece una conexión mediante el endpoint `/events`, utilizando la API `EventSource` del navegador.
-
-### 3.1. Conexión
-
-```http
-GET /events
-```
-
-El servidor responde utilizando el tipo de contenido `text/event-stream`.
-
-### 3.2. Eventos
-
-#### Estado inicial (`initial_state`)
-
-Se envía cuando la pantalla establece la conexión.
+Se envía inmediatamente al abrir la conexión:
 
 ```text
 event: initial_state
 data: {"participants":[],"products":[],"votes":[]}
-
 ```
 
-Contiene el estado completo y actual de la sesión.
+### `state_update`
 
-#### Actualización del estado (`state_update`)
-
-Se envía cada vez que ocurre un cambio relevante en la lista compartida.
+Se envía con el estado completo cuando se agrega, quita o actualiza un producto, se registra o retira un voto, cambia un nombre o se conecta/desconecta un participante.
 
 ```text
 event: state_update
 data: {"participants":[],"products":[],"votes":[]}
-
 ```
 
-Contiene el estado actualizado para que la pantalla pueda refrescar su información sin recargar la página.
+## Estado y conexiones
 
-La pantalla no envía acciones ni modifica el estado de la aplicación.
-
-## 4. Sincronización del estado
-
-El servidor es la única fuente de verdad del estado de la aplicación.
-
-- Todas las acciones recibidas se validan y procesan en el servidor.
-- Los participantes reciben el estado inicial al ingresar.
-- Los participantes reciben actualizaciones cuando se producen cambios relevantes.
-- La pantalla recibe el estado inicial y las actualizaciones posteriores mediante SSE.
-- El servidor calcula la cantidad de votos y mantiene la consistencia de la lista compartida.
-- Los productos incorporados y los votos se reflejan en todos los clientes conectados.
-
-## 5. Validación y manejo de errores
-
-El servidor valida cada mensaje recibido mediante WebSocket.
-
-La validación contempla:
-
-- Formato JSON válido.
-- Tipo de mensaje reconocido.
-- Presencia de los campos obligatorios.
-- Tipos de datos y valores permitidos.
-- Límites establecidos para cada operación.
-- Permisos del participante.
-- Consistencia con el estado actual de la aplicación.
-
-Los mensajes inválidos generan una respuesta de error únicamente al emisor.
-
-El servidor debe continuar funcionando ante mensajes inválidos, errores de comunicación o fallos del catálogo externo.
-
-## 6. Gestión de conexiones
-
-- Cada participante se identifica mediante un ID generado por el servidor y asociado a su conexión WebSocket.
-- Cuando un participante se desconecta, el servidor libera los recursos asociados a esa conexión.
-- La cantidad de participantes conectados se actualiza y se comunica a los demás clientes.
-- Las conexiones SSE se cierran cuando la pantalla se desconecta.
-- Los clientes desconectados dejan de recibir actualizaciones.
-
-## 7. Decisiones de comunicación
-
-- WebSocket se utiliza para los participantes porque necesitan comunicación bidireccional.
-- SSE se utiliza para la pantalla porque únicamente necesita recibir actualizaciones.
-- JSON proporciona un formato común para el intercambio de información.
-- El servidor administra el estado centralizado y distribuye las actualizaciones a los clientes conectados.
-- No se utiliza Socket.IO ni otro protocolo de comunicación basado en bibliotecas adicionales.
-- No se utiliza una base de datos; el estado permanece en memoria mientras el servidor está en ejecución.
+- `participants` contiene a quienes están conectados. Al desconectarse una persona, se la quita de esta colección y se notifica el cambio.
+- Los votos se guardan como registros `{ "participantId": "...", "productId": 5 }`. Se conservan aunque el participante se desconecte.
+- El estado vive en memoria y se pierde al detener el servidor.
+- La conexión WebSocket identifica al participante hasta que se cierra. La recuperación de identidad al reconectar todavía no está implementada.
+- WebSocket permite enviar acciones y recibir respuestas; SSE entrega novedades a la pantalla sin mantener un canal de envío desde ella.

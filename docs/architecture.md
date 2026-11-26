@@ -1,174 +1,98 @@
 # Arquitectura del sistema
 
-## 1. Enfoque arquitectónico
+## Enfoque
 
-El proyecto utiliza una arquitectura por capas, organizada en módulos funcionales y tomando algunos principios de la arquitectura hexagonal.
+El backend separa las interfaces de comunicación, los casos de uso, el dominio y la infraestructura. Las interfaces dependen de los servicios de aplicación; estos usan contratos de repositorio y catálogo, y la infraestructura provee sus implementaciones en memoria y para DummyJSON.
 
-El objetivo es separar las responsabilidades para evitar que la comunicación, las reglas de negocio y el acceso a servicios externos queden mezclados.
+El frontend es un proyecto separado de React y TypeScript. Actualmente es un esqueleto: las vistas, hooks y servicios de comunicación existen como archivos, pero todavía están vacíos; `App.tsx` solo presenta un encabezado.
 
-Se divide en dos aplicaciones:
+## Backend
 
-- **Backend:** administra el estado compartido, aplica las reglas del sistema y gestiona las comunicaciones.
-- **Frontend:** presenta la información y permite la interacción de los participantes y la visualización de la pantalla.
+### Interfaces
 
-## 2. Arquitectura del backend
+- `interfaces/http/HealthRoutes.ts`: expone `GET /health`.
+- `interfaces/websocket/`: abre `/ws`, administra conexiones, valida mensajes y distribuye estado.
+- `interfaces/sse/`: expone `GET /events`, envía el estado inicial y distribuye eventos completos a la pantalla.
 
-El backend se organiza en cuatro capas.
+El servidor HTTP de Node comparte el puerto con WebSocket y Express/SSE. **Todavía no sirve los archivos del frontend**; integrar el frontend en ese mismo servidor queda pendiente.
 
-### 2.1. Interfaces de comunicación
+### Aplicación
 
-Es el punto de entrada y salida del sistema. Recibe solicitudes de los clientes y transmite las respuestas y actualizaciones.
+- `ParticipantService`: ingreso, validación/cambio de nombre y desconexión.
+- `ProductService`: propuestas concurrentes, gestión de duplicados y eliminación.
+- `VoteService`: registrar y retirar votos.
+- `ports/CatalogProvider.ts`: contrato para consultar productos.
+- `errors/`: errores de catálogo y participantes que usan los casos de uso.
 
-Responsabilidades:
+Los servicios de aplicación no dependen de Express ni de WebSocket.
 
-- Servir la aplicación web mediante HTTP.
-- Gestionar las conexiones WebSocket de los participantes.
-- Gestionar las conexiones SSE de la pantalla.
-- Validar la estructura de los mensajes recibidos.
-- Enviar respuestas y actualizaciones a los clientes.
+### Dominio
 
-Tecnologías principales: Express, WebSocket (`ws`) y SSE.
+Contiene `Participant`, `Product`, `Vote`, sus contratos de repositorio y `AppState`, el estado compartido.
 
-### 2.2. Aplicación
+### Infraestructura y configuración
 
-Contiene los servicios que coordinan las operaciones del sistema.
+- `infrastructure/catalog/DummyJsonCatalogProvider.ts`: consulta DummyJSON, aplica timeout y demora configurada, y normaliza errores del servicio externo.
+- `infrastructure/repositories/Memory*Repository.ts`: guarda participantes, productos y votos en el estado en memoria.
+- `config/env.ts`: lee puerto, URL del catálogo, timeout y demora simulada.
 
-Responsabilidades:
+No hay base de datos: al detener el proceso se pierde el estado.
 
-- Gestionar el ingreso y desconexión de participantes.
-- Coordinar las propuestas de productos.
-- Gestionar los votos y la eliminación de productos.
-- Coordinar las consultas al catálogo externo.
-- Solicitar la actualización y distribución del estado.
-
-Esta capa organiza los casos de uso sin depender directamente de los mecanismos de comunicación.
-
-### 2.3. Dominio
-
-Contiene los conceptos y las reglas principales del sistema.
-
-Responsabilidades:
-
-- Definir las entidades y sus relaciones.
-- Mantener las reglas de participación.
-- Controlar las condiciones para votar y eliminar productos.
-- Mantener la consistencia de los datos.
-
-No debe depender de Express, WebSocket ni de servicios externos.
-
-### 2.4. Infraestructura
-
-Contiene los mecanismos necesarios para acceder a recursos externos y administrar la persistencia temporal.
-
-Responsabilidades:
-
-- Consultar el catálogo DummyJSON.
-- Configurar los tiempos de espera de las consultas.
-- Administrar el estado en memoria.
-- Proporcionar mecanismos de acceso y modificación de los datos.
-
-No se utiliza una base de datos. El estado se mantiene en memoria durante la ejecución del servidor.
-
-## 3. Estructura del backend
+## Estructura real del backend
 
 ```text
-server/
-└── src/
-    ├── domain/
-    │   ├── entities/
-    │   └── state/
-    │
-    ├── application/
-    │   └── services/
-    │
-    ├── infrastructure/
-    │   ├── catalog/
-    │   └── repositories/
-    │
-    ├── interfaces/
-    │   ├── http/
-    │   ├── websocket/
-    │   └── sse/
-    │
-    ├── config/
-    │
-    └── index.ts
+server/src/
+├── application/
+│   ├── errors/
+│   ├── ports/
+│   └── services/
+├── config/
+├── domain/
+│   ├── entities/
+│   ├── repositories/
+│   └── state/
+├── infrastructure/
+│   ├── catalog/
+│   └── repositories/
+├── interfaces/
+│   ├── http/
+│   ├── sse/
+│   └── websocket/
+└── index.ts
 ```
 
-| Directorio | Responsabilidad |
-|---|---|
-| `domain/entities` | Entidades del modelo de datos. |
-| `domain/state` | Estado y reglas centrales del dominio. |
-| `application/services` | Coordinación de los casos de uso. |
-| `infrastructure/catalog` | Integración con DummyJSON. |
-| `infrastructure/repositories` | Administración del estado en memoria. |
-| `interfaces/http` | Rutas y endpoints HTTP. |
-| `interfaces/websocket` | Conexiones y mensajes WebSocket. |
-| `interfaces/sse` | Conexiones y eventos SSE. |
-| `config` | Configuración y variables de entorno. |
-| `index.ts` | Inicialización y puesta en marcha del servidor. |
+`index.ts` crea el estado y los repositorios, conecta las dependencias de aplicación e interfaces y arranca el servidor.
 
-## 4. Arquitectura del frontend
-
-El frontend utiliza React con TypeScript y se organiza mediante componentes, páginas, servicios de comunicación y hooks.
-
-La aplicación tiene dos vistas:
-
-- **Participante (`/`):** permite ingresar, proponer productos, votar y consultar el estado compartido.
-- **Pantalla (`/screen`):** muestra el ranking, los votos y los participantes conectados.
-
-### Responsabilidades
-
-- **Pages:** representan las vistas principales de la aplicación.
-- **Components:** contienen los elementos visuales reutilizables.
-- **Services:** encapsulan la comunicación con el servidor.
-- **Hooks:** administran las conexiones y el estado necesario para las vistas.
-- **Types:** definen los tipos utilizados para representar datos y mensajes.
-
-## 5. Estructura del frontend
+## Frontend actual
 
 ```text
-client/
-└── src/
-    ├── pages/
-    │   ├── ParticipantPage.tsx
-    │   └── ScreenPage.tsx
-    │
-    ├── components/
-    │   ├── products/
-    │   ├── participants/
-    │   └── ranking/
-    │
-    ├── services/
-    │   ├── websocket.ts
-    │   └── sse.ts
-    │
-    ├── hooks/
-    │   ├── useWebSocket.ts
-    │   └── useScreenEvents.ts
-    │
-    ├── types/
-    │
-    ├── App.tsx
-    └── main.tsx
+client/src/
+├── components/
+│   ├── participants.tsx
+│   ├── products.tsx
+│   └── ranking.tsx
+├── hooks/
+│   ├── useScreenEvents.ts
+│   └── useWebSockets.ts
+├── pages/
+│   ├── ParticipantPage.tsx
+│   └── ScreenPage.tsx
+├── services/
+│   ├── sse.ts
+│   └── websocket.ts
+├── App.tsx
+└── main.tsx
 ```
 
-## 6. Flujo general de funcionamiento
+Los archivos de `components`, `hooks`, `pages` y `services` todavía no implementan las pantallas ni el cliente de los protocolos.
 
-1. El navegador solicita la aplicación al servidor mediante HTTP.
-2. El participante establece una conexión WebSocket e ingresa su nombre.
-3. El servidor registra al participante y le envía el estado inicial.
-4. Cuando un participante realiza una acción, el servidor recibe y valida el mensaje.
-5. La capa de aplicación coordina la operación y utiliza el dominio y la infraestructura cuando corresponde.
-6. Si la operación modifica el estado, el servidor distribuye la actualización a los participantes mediante WebSocket y a la pantalla mediante SSE.
-7. Los clientes actualizan sus interfaces con la información recibida.
+## Flujo del backend
 
-## 7. Criterios de diseño
+1. Express atiende rutas HTTP; el mismo servidor HTTP admite WebSocket y SSE.
+2. El participante abre WebSocket y envía `join`.
+3. La interfaz valida el mensaje y delega el caso de uso al servicio correspondiente.
+4. Los servicios aplican las reglas usando repositorios y, para propuestas, el puerto de catálogo.
+5. Cuando cambia el estado, WebSocket recibe actualizaciones completas y la pantalla recibe el evento SSE `state_update`.
+6. Una conexión nueva recibe `initial_state`; una desconexión actualiza la colección de participantes conectados.
 
-- Separación de responsabilidades entre las capas.
-- El servidor es la única fuente de verdad del estado compartido.
-- Las reglas de negocio no dependen de los protocolos de comunicación.
-- La integración con DummyJSON se mantiene separada de la lógica principal.
-- Los mensajes intercambiados utilizan contratos tipados.
-- El frontend separa la presentación de la comunicación con el servidor.
-- La arquitectura debe mantenerse simple y acorde al alcance del proyecto.
+El contrato detallado está en [protocol.md](protocol.md), las reglas en [functional-decisions.md](functional-decisions.md) y las estructuras en [data-model.md](data-model.md).

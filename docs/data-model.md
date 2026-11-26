@@ -1,68 +1,57 @@
-# Data Model
+# Modelo de datos
 
-## 1. Entidades principales
+## Entidades
 
 ### Participant
 
-Representa a una persona conectada que puede proponer productos y votar.
+Representa a una persona conectada.
 
 | Atributo | Tipo | Descripción |
 |---|---|---|
-| id | string | Identificador único del participante. |
-| name | string | Nombre visible del participante. |
+| `id` | string | UUID generado por el servidor para el ingreso actual. |
+| `name` | string | Nombre visible, normalizado y único entre participantes conectados. |
 
 ### Product
 
-Representa un producto del catálogo externo que fue incorporado a la lista compartida.
+Representa un producto del catálogo incorporado a la lista compartida.
 
 | Atributo | Tipo | Descripción |
 |---|---|---|
-| id | number | Identificador original del producto en DummyJSON. |
-| title | string | Nombre del producto. |
-| price | number | Precio del producto. |
-| thumbnail | string | Imagen del producto. |
-| proposedBy | string | Identificador del participante que lo propuso. |
+| `id` | number | Identificador original del producto en DummyJSON. |
+| `title` | string | Título recibido del catálogo. |
+| `price` | number | Precio recibido del catálogo. |
+| `thumbnail` | string | URL de imagen recibida del catálogo. |
+| `proposedBy` | string | ID del participante que lo propuso. |
 
 ### Vote
 
-Representa el voto de un participante sobre un producto.
+Representa un voto individual.
 
 | Atributo | Tipo | Descripción |
 |---|---|---|
-| participantId | string | Identificador del participante que votó. |
-| productId | number | Identificador del producto votado. |
+| `participantId` | string | ID del participante que votó. |
+| `productId` | number | ID del producto votado. |
 
-## 2. Relaciones
+Un participante puede votar por varios productos, pero solo una vez por cada uno. Un producto puede recibir votos de varias personas.
 
-- Un participante puede proponer uno o varios productos.
-- Cada producto incorporado pertenece a la lista compartida y registra quién lo propuso.
-- Un participante puede votar por varios productos.
-- Un producto puede recibir votos de varios participantes.
-- Un participante solo puede votar una vez por cada producto.
+## Estado en memoria
 
-La relación entre participantes y productos mediante los votos es de muchos a muchos.
+El estado se administra sin base de datos mediante:
 
-## 3. Estado en memoria
+- `participants`: `Map<string, Participant>` con los participantes conectados, indexados por ID.
+- `products`: `Map<number, Product>` con los productos de la lista, indexados por ID de catálogo.
+- `votes`: `Vote[]` con un registro por voto.
 
-El servidor mantiene el estado de la aplicación en memoria, sin utilizar una base de datos.
+Al desconectarse un participante, se lo quita de `participants`, pero sus votos permanecen en `votes`. Al eliminar un producto, se quita de `products` y se eliminan los votos que lo referencian. El estado completo se pierde cuando se detiene el servidor.
 
-Se utilizan las siguientes estructuras:
+## Elementos que no son entidades persistidas
 
-- `participants`: colección de participantes conectados, identificados por su ID.
-- `products`: colección global de productos incorporados, identificados por el ID de DummyJSON.
-- `votes`: colección de votos agrupados por participante, donde cada participante tiene un conjunto de productos votados.
+- **Catálogo:** servicio externo DummyJSON; no forma parte del estado compartido.
+- **Propuesta:** acción que envía entre 1 y 10 IDs; no se almacena después de procesarse.
+- **Lista compartida:** colección global representada por `products`; no requiere una entidad adicional.
 
-## 4. Elementos que no constituyen entidades
+## Decisiones actuales y límite conocido
 
-- **Catálogo:** fuente externa de productos proporcionada por DummyJSON. No forma parte del estado de dominio.
-- **Propuesta:** acción mediante la cual un participante envía uno o varios IDs de productos. No se almacena como entidad.
-- **Lista compartida:** colección global de productos administrada por el servidor. No requiere una entidad independiente en esta versión.
-
-## 5. Decisiones de diseño
-
-- Se utiliza una única lista compartida para todos los participantes.
-- Los productos conservan el identificador original de DummyJSON.
-- Cada producto registra a su proponente mediante `proposedBy`.
-- Solo el participante que propuso un producto puede eliminarlo.
-- Los votos se representan mediante una colección independiente de los productos.
-- El estado se pierde cuando el servidor deja de ejecutarse, ya que no existe persistencia.
+- Los productos conservan el ID de DummyJSON y registran a quien los propuso.
+- Mientras el proponente está conectado, solo él puede eliminar el producto. Tras su desconexión, puede hacerlo cualquier participante conectado.
+- La identidad de reconexión todavía no se recupera: cada `join` genera un ID nuevo. El mecanismo seguro para recuperar la identidad sigue pendiente.

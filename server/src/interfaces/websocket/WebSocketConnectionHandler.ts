@@ -1,6 +1,5 @@
 
-import type { WebSocket } from "ws";
-import type { RawData } from "ws";
+import type { WebSocket, RawData } from "ws";
 
 import type { ParticipantService } from "../../application/services/ParticipantService";
 import type { WebSocketMessageHandler } from "./WebSocketMessageHandler";

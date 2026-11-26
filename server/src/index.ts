@@ -1,7 +1,9 @@
+
 import "dotenv/config";
 
 import express from "express";
 import { createServer } from "node:http";
+import path from "node:path";
 
 import { env } from "./config/env";
 
@@ -38,6 +40,8 @@ import { WebSocketServer } from "./interfaces/websocket/WebSocketServer";
 // Application setup
 const app = express();
 const server = createServer(app);
+
+const clientDistPath = path.resolve(__dirname, "../../client/dist");
 
 app.use(express.json());
 
@@ -114,6 +118,13 @@ const webSocketConnectionHandler = new WebSocketConnectionHandler(
 app.use(HealthRoutes);
 
 sseConnectionHandler.register(app);
+
+// Frontend static files
+app.use(express.static(clientDistPath));
+
+app.get("/screen", (_req, res) => {
+    res.sendFile(path.join(clientDistPath, "index.html"));
+});
 
 new WebSocketServer(
     server,

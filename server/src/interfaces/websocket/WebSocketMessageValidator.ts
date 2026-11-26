@@ -16,10 +16,21 @@ const MAX_NAME_LENGTH = 20;
 
 export class WebSocketMessageValidator {
     validate(data: RawData): ValidationResult {
+
+        let text: string;
+
+        if (Buffer.isBuffer(data)) {
+            text = data.toString("utf-8");
+        } else if (Array.isArray(data)) {
+            text = Buffer.concat(data).toString("utf-8");
+        } else {
+            text = Buffer.from(data).toString("utf-8");
+        }
+
         let parsed: unknown;
 
         try {
-            parsed = JSON.parse(data.toString());
+            parsed = JSON.parse(text);
         } catch {
             return {
                 valid: false,

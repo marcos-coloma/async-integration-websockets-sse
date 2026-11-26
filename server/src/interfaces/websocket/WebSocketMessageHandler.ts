@@ -193,12 +193,15 @@ export class WebSocketMessageHandler {
         const result = this.voteService.vote(participantId, productId);
 
         if (result !== "voted") {
-            const errorCode =
-                result === "already_voted"
-                    ? "DUPLICATE_VOTE"
-                    : result === "not_found"
-                        ? "NOT_FOUND"
-                        : "NOT_AUTHORIZED";
+            let errorCode: string;
+
+            if (result === "already_voted") {
+                errorCode = "DUPLICATE_VOTE";
+            } else if (result === "not_found") {
+                errorCode = "NOT_FOUND";
+            } else {
+                errorCode = "NOT_AUTHORIZED";
+            }
 
             this.sendError(socket, errorCode, result);
             return;

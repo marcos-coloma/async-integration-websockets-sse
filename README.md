@@ -68,7 +68,7 @@ Las variables son opcionales y pueden definirse en `server/.env`:
 - [Decisiones funcionales](docs/functional-decisions.md): nombres, votos, desconexiones, propuestas y permisos.
 - [Modelo de datos](docs/data-model.md): entidades y estado en memoria.
 - [Arquitectura](docs/architecture.md): capas y estado de implementación.
-- [Consigna](docs/assignment.md): requisitos originales del trabajo práctico.
+- [Consigna](docs/assignment.txt): requisitos originales del trabajo práctico.
 
 El estado se pierde cuando se detiene el servidor. La recuperación de identidad al reconectar y la integración del frontend en el servidor único siguen pendientes.
 

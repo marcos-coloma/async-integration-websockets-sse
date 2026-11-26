@@ -1,4 +1,6 @@
+
 import type { Product } from "../types/entities";
+import "./ProductItem.css";
 
 interface ProductItemProps {
     readonly product: Product;
@@ -20,33 +22,60 @@ export function ProductItem({
     onRemoveProduct
 }: ProductItemProps) {
     return (
-        <li>
-            <img
-                src={product.thumbnail}
-                alt={product.title}
-                width={100}
-            />
+        <li className="product-card">
+            <div className="product-image-wrap">
+                <img
+                    className="product-image"
+                    src={product.thumbnail}
+                    alt={product.title}
+                    loading="lazy"
+                />
+            </div>
 
-            <h3>{product.title}</h3>
-            <p>Price: ${product.price}</p>
-            <p>Proposed by: {product.proposedBy}</p>
-            <p>Votes: {voteCount}</p>
+            <div className="product-info">
+                <h3 className="product-title">
+                    {product.title}
+                </h3>
 
-            {hasVoted ? (
-                <button onClick={() => onRemoveVote(product.id)}>
-                    Remove vote
-                </button>
-            ) : (
-                <button onClick={() => onVote(product.id)}>
-                    Vote
-                </button>
-            )}
+                <p className="product-price numeric">
+                    ${product.price.toFixed(2)}
+                </p>
 
-            {canRemove && (
-                <button onClick={() => onRemoveProduct(product.id)}>
-                    Remove product
-                </button>
-            )}
+                <p className="product-proposer">
+                    Proposed by: {product.proposedBy}
+                </p>
+            </div>
+
+            <div className="product-actions">
+                <div className="vote-count">
+                    Votes: {voteCount}
+                </div>
+
+                {hasVoted ? (
+                    <button
+                        className="btn btn-secondary"
+                        onClick={() => onRemoveVote(product.id)}
+                    >
+                        Remove vote
+                    </button>
+                ) : (
+                    <button
+                        className="btn btn-primary"
+                        onClick={() => onVote(product.id)}
+                    >
+                        Vote
+                    </button>
+                )}
+
+                {canRemove && (
+                    <button
+                        className="btn btn-danger"
+                        onClick={() => onRemoveProduct(product.id)}
+                    >
+                        Remove product
+                    </button>
+                )}
+            </div>
         </li>
     );
 }

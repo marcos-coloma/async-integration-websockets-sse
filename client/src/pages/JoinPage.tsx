@@ -1,4 +1,6 @@
+
 import { useState } from "react";
+import "./JoinPage.css";
 
 interface JoinPageProps {
     readonly status: string;
@@ -11,14 +13,13 @@ export function JoinPage({
     error,
     onJoin
 }: JoinPageProps) {
-
     const [name, setName] = useState("");
     const [validationError, setValidationError] =
         useState<string | null>(null);
 
-    function handleSubmit(event: Parameters<
-    NonNullable<React.ComponentProps<"form">["onSubmit"]>
-    >[0]) {
+    function handleSubmit(
+        event: React.FormEvent<HTMLFormElement>
+    ) {
         event.preventDefault();
 
         const trimmedName = name.trim();
@@ -40,39 +41,71 @@ export function JoinPage({
     }
 
     return (
-        <main>
-            <h1>Join the shared list</h1>
+        <main className="join-page">
+            <section className="join-card">
+                <div className="join-brand" aria-hidden="true">
+                    R
+                </div>
 
-            <form onSubmit={handleSubmit}>
-                <label htmlFor="participant-name">
-                    Your name
-                </label>
+                <p className="eyebrow">Realtime Collaboration</p>
 
-                <input
-                    id="participant-name"
-                    type="text"
-                    value={name}
-                    onChange={(event) =>
-                        handleNameChange(event.target.value)
-                    }
-                    maxLength={20}
-                    required
-                />
+                <h1 className="join-title">
+                    Join the shared list
+                </h1>
 
-                <button type="submit">
-                    Join
-                </button>
-            </form>
+                <p className="join-description">
+                    Join your group, discover products and vote
+                    together to decide what makes the list.
+                </p>
 
-            <p>Connection status: {status}</p>
+                <form className="join-form" onSubmit={handleSubmit}>
+                    <div>
+                        <label
+                            className="field-label"
+                            htmlFor="participant-name"
+                        >
+                            Your name
+                        </label>
 
-            {validationError && (
-                <p>{validationError}</p>
-            )}
+                        <input
+                            className="text-input"
+                            id="participant-name"
+                            type="text"
+                            placeholder="Enter your name"
+                            value={name}
+                            onChange={(event) =>
+                                handleNameChange(event.target.value)
+                            }
+                            maxLength={20}
+                            autoComplete="name"
+                            required
+                        />
+                    </div>
 
-            {error && (
-                <p>{error}</p>
-            )}
+                    <button className="btn btn-primary" type="submit">
+                        Join session
+                    </button>
+                </form>
+
+                {validationError && (
+                    <p className="feedback" role="alert">
+                        {validationError}
+                    </p>
+                )}
+
+                {error && (
+                    <p className="feedback" role="alert">
+                        {error}
+                    </p>
+                )}
+
+                <div className="join-footer">
+                    <span className={`status-indicator status-${status}`}>
+                        <span className="status-dot" />
+                        {status}
+                    </span>
+                </div>
+            </section>
         </main>
     );
 }

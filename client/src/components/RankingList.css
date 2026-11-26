@@ -1,0 +1,132 @@
+.ranking-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 20px;
+  counter-reset: ranking;
+}
+
+.ranking-item {
+  display: grid;
+  grid-template-columns: 48px 76px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+  padding: 14px 18px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface-raised);
+  counter-increment: ranking;
+}
+
+.ranking-item:first-child {
+  border-color: var(--primary-highlight-border);
+  background: linear-gradient(100deg, var(--surface-highlight), var(--surface) 75%);
+}
+
+.ranking-position {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border-radius: 12px;
+  background: var(--surface-chip);
+  color: var(--muted);
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.ranking-item:first-child .ranking-position {
+  background: var(--primary-highlight);
+  color: var(--primary-soft-text);
+}
+
+.ranking-image-wrap {
+  display: grid;
+  width: 76px;
+  height: 76px;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 12px;
+  background: var(--surface-subtle);
+}
+
+.ranking-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  mix-blend-mode: multiply;
+}
+
+.ranking-product-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.ranking-product-price {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.ranking-votes {
+  min-width: 88px;
+  text-align: right;
+}
+
+.ranking-votes-value {
+  display: block;
+  color: var(--primary);
+  font-size: 23px;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+.ranking-votes-label {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+@media (max-width: 640px) {
+
+  .ranking-item {
+    grid-template-columns: 34px 58px minmax(0, 1fr);
+    gap: 10px;
+    padding: 11px;
+  }
+
+  .ranking-position {
+    width: 32px;
+    height: 32px;
+    font-size: 12px;
+  }
+
+  .ranking-image-wrap {
+    width: 58px;
+    height: 58px;
+  }
+
+  .ranking-product-title {
+    font-size: 13px;
+  }
+
+  .ranking-votes {
+    grid-column: 3;
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    text-align: left;
+  }
+
+  .ranking-votes-value {
+    font-size: 17px;
+  }
+
+  .ranking-votes-label {
+    font-size: 10px;
+  }
+}

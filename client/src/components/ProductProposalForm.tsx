@@ -1,3 +1,6 @@
+
+import "./ProductProposalForm.css";
+
 interface ProductProposalFormProps {
     readonly onPropose: (productIds: number[]) => void;
 }
@@ -10,7 +13,6 @@ export function ProductProposalForm({
 
         const formData = new FormData(event.currentTarget);
         const value = formData.get("productIds");
-
         const input = typeof value === "string" ? value : "";
 
         const productIds = input
@@ -27,28 +29,31 @@ export function ProductProposalForm({
     }
 
     return (
-        <section>
-            <h2>Propose products</h2>
-
-            <form onSubmit={handleSubmit}>
-                <label htmlFor="productIds">
-                    Product IDs (separated by commas)
+        <form className="proposal-form" onSubmit={handleSubmit}>
+            <div>
+                <label className="field-label" htmlFor="productIds">
+                    Product IDs
                 </label>
 
-                <input
-                    id="productIds"
-                    name="productIds"
-                    type="text"
-                    placeholder="Example: 1, 2, 3"
-                    required
-                />
+                <div className="proposal-controls">
+                    <input
+                        className="text-input"
+                        id="productIds"
+                        name="productIds"
+                        type="text"
+                        placeholder="Example: 1, 2, 3"
+                        required
+                    />
 
-                <button type="submit">
-                    Propose
-                </button>
-            </form>
+                    <button className="btn btn-primary" type="submit">
+                        Add products
+                    </button>
+                </div>
+            </div>
 
-            <p>Enter between 1 and 10 product IDs.</p>
-        </section>
+            <p className="proposal-hint">
+                Enter between 1 and 10 product IDs, separated by commas.
+            </p>
+        </form>
     );
 }

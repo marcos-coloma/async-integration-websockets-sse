@@ -1,0 +1,75 @@
+.join-page {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 32px 20px;
+  background:
+    radial-gradient(ellipse at 15% 15%, var(--primary-glow-strong), transparent 38%),
+    radial-gradient(ellipse at 90% 85%, var(--border-glow), transparent 35%),
+    var(--bg);
+}
+
+.join-card {
+  width: min(100%, 440px);
+  padding: 42px;
+  border: 1px solid var(--border);
+  border-radius: 26px;
+  background: var(--surface);
+  box-shadow: 0 20px 60px var(--shadow-join);
+}
+
+.join-brand {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  margin-bottom: 28px;
+  border-radius: 16px;
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.join-title {
+  margin: 0;
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: -0.05em;
+  line-height: 1.15;
+}
+
+.join-description {
+  margin: 12px 0 28px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.join-form {
+  display: grid;
+  gap: 12px;
+}
+
+.join-form .btn {
+  width: 100%;
+  margin-top: 8px;
+}
+
+.join-footer {
+  display: flex;
+  justify-content: center;
+  margin-top: 22px;
+}
+
+@media (max-width: 640px) {
+
+  .join-card {
+    padding: 30px 24px;
+    border-radius: 22px;
+  }
+
+  .join-title {
+    font-size: 27px;
+  }
+}

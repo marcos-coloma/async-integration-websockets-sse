@@ -19,14 +19,14 @@ const sharedState: SharedState = {
             id: 1,
             title: "Product One",
             price: 10,
-            thumbnail: "",
+            thumbnail: "https://example.com/1.jpg",
             proposedBy: "p1"
         },
         {
             id: 2,
             title: "Product Two",
             price: 20,
-            thumbnail: "",
+            thumbnail: "https://example.com/2.jpg",
             proposedBy: "p2"
         }
     ],
@@ -48,9 +48,13 @@ describe("ScreenPage", () => {
 
         render(<ScreenPage />);
 
-        expect(screen.getByRole("heading", { name: "Live product ranking" })).toBeInTheDocument();
-        expect(screen.getByText("SSE connection: connected")).toBeInTheDocument();
-        expect(screen.getByText("Total: 2")).toBeInTheDocument();
+        expect(
+            screen.getByRole("heading", { name: "Live product ranking" })
+        ).toBeInTheDocument();
+        expect(screen.getByText("connected")).toBeInTheDocument();
+        expect(
+            within(screen.getByText("Participants").parentElement!).getByText("2")
+        ).toBeInTheDocument();
         expect(screen.getByText("Alice")).toBeInTheDocument();
         expect(screen.getByText("Bob")).toBeInTheDocument();
     });
@@ -68,9 +72,13 @@ describe("ScreenPage", () => {
 
         render(<ScreenPage />);
 
-        expect(screen.getByText("Total: 0")).toBeInTheDocument();
-        expect(screen.getByText("No participants connected.")).toBeInTheDocument();
-        expect(screen.getByText("No products have been proposed yet.")).toBeInTheDocument();
+        expect(
+            within(screen.getByText("Participants").parentElement!).getByText("0")
+        ).toBeInTheDocument();
+        expect(screen.getByText("No products yet")).toBeInTheDocument();
+        expect(
+            screen.getByText("The ranking will appear as soon as products are proposed.")
+        ).toBeInTheDocument();
     });
 
     it("should display connection errors", () => {
@@ -85,7 +93,7 @@ describe("ScreenPage", () => {
         expect(screen.getByRole("alert")).toHaveTextContent(
             "SSE connection error. Reconnecting..."
         );
-        expect(screen.getByText("SSE connection: error")).toBeInTheDocument();
+        expect(screen.getByText("error")).toBeInTheDocument();
     });
 
     it("should display the ranking using the received state", () => {
@@ -97,16 +105,13 @@ describe("ScreenPage", () => {
 
         render(<ScreenPage />);
 
-        const ranking = screen.getByRole("heading", { name: "Product ranking" });
+        const ranking = screen.getByRole("heading", { name: "Community ranking" });
         expect(ranking).toBeInTheDocument();
 
-        const rankingSection = screen
-            .getByRole("heading", { name: "Product ranking" })
-            .closest("section");
-
-        const items = within(rankingSection!).getAllByRole("listitem");
+        const items = within(screen.getByRole("list")).getAllByRole("listitem");
 
         expect(items[0]).toHaveTextContent("Product Two");
-        expect(items[0]).toHaveTextContent("Votes: 2");
+        expect(within(items[0]).getByText("2")).toBeInTheDocument();
+        expect(within(items[0]).getByText("votes")).toBeInTheDocument();
     });
 });

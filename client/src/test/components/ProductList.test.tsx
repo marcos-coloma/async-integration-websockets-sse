@@ -47,7 +47,9 @@ describe("ProductList", () => {
             />
         );
 
-        expect(screen.getByRole("heading", { name: "Products" })).toBeInTheDocument();
+        expect(
+            screen.getByRole("heading", { name: "Products (0)" })
+        ).toBeInTheDocument();
         expect(screen.getByText("No products proposed yet.")).toBeInTheDocument();
     });
 

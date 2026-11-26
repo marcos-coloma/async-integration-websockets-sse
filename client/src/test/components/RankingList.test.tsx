@@ -9,21 +9,21 @@ const products: Product[] = [
         id: 1,
         title: "Product One",
         price: 10,
-        thumbnail: "",
+        thumbnail: "https://example.com/1.jpg",
         proposedBy: "p1"
     },
     {
         id: 2,
         title: "Product Two",
         price: 20,
-        thumbnail: "",
+        thumbnail: "https://example.com/2.jpg",
         proposedBy: "p2"
     },
     {
         id: 3,
         title: "Product Three",
         price: 30,
-        thumbnail: "",
+        thumbnail: "https://example.com/3.jpg",
         proposedBy: "p3"
     }
 ];
@@ -38,8 +38,11 @@ describe("RankingList", () => {
     it("should display an empty message when there are no products", () => {
         render(<RankingList products={[]} votes={[]} />);
 
-        expect(screen.getByText("No products have been proposed yet.")).toBeInTheDocument();
-        expect(screen.queryByRole("heading", { name: "Product ranking" })).not.toBeInTheDocument();
+        expect(screen.getByText("No products yet")).toBeInTheDocument();
+        expect(
+            screen.getByText("The ranking will appear as soon as products are proposed.")
+        ).toBeInTheDocument();
+        expect(screen.queryByRole("list")).not.toBeInTheDocument();
     });
 
     it("should rank products by vote count in descending order", () => {
@@ -50,11 +53,14 @@ describe("RankingList", () => {
 
         expect(items).toHaveLength(3);
         expect(items[0]).toHaveTextContent("Product Two");
-        expect(items[0]).toHaveTextContent("Votes: 2");
+        expect(within(items[0]).getByText("2")).toBeInTheDocument();
+        expect(within(items[0]).getByText("votes")).toBeInTheDocument();
         expect(items[1]).toHaveTextContent("Product One");
-        expect(items[1]).toHaveTextContent("Votes: 1");
+        expect(within(items[1]).getByText("1")).toBeInTheDocument();
+        expect(within(items[1]).getByText("vote")).toBeInTheDocument();
         expect(items[2]).toHaveTextContent("Product Three");
-        expect(items[2]).toHaveTextContent("Votes: 0");
+        expect(within(items[2]).getByText("0")).toBeInTheDocument();
+        expect(within(items[2]).getByText("votes")).toBeInTheDocument();
     });
 
     it("should preserve the original order when products have the same vote count", () => {

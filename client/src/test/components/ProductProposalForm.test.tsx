@@ -9,20 +9,10 @@ describe("ProductProposalForm", () => {
 
         render(<ProductProposalForm onPropose={onPropose} />);
 
-        expect(
-            screen.getByRole("heading", {
-                name: "Propose products"
-            })
-        ).toBeInTheDocument();
+        expect(screen.getByLabelText("Product IDs")).toBeInTheDocument();
 
         expect(
-            screen.getByLabelText(
-                "Product IDs (separated by commas)"
-            )
-        ).toBeInTheDocument();
-
-        expect(
-            screen.getByRole("button", { name: "Propose" })
+            screen.getByRole("button", { name: "Add products" })
         ).toBeInTheDocument();
     });
 
@@ -32,12 +22,10 @@ describe("ProductProposalForm", () => {
 
         render(<ProductProposalForm onPropose={onPropose} />);
 
-        const input = screen.getByLabelText(
-            "Product IDs (separated by commas)"
-        );
+        const input = screen.getByLabelText("Product IDs");
 
         await user.type(input, "1, 2, 3");
-        await user.click(screen.getByRole("button", { name: "Propose" }));
+        await user.click(screen.getByRole("button", { name: "Add products" }));
 
         expect(onPropose).toHaveBeenCalledOnce();
         expect(onPropose).toHaveBeenCalledWith([1, 2, 3]);
@@ -51,13 +39,11 @@ describe("ProductProposalForm", () => {
         render(<ProductProposalForm onPropose={onPropose} />);
 
         await user.type(
-            screen.getByLabelText(
-                "Product IDs (separated by commas)"
-            ),
+            screen.getByLabelText("Product IDs"),
             "1, abc, 2, 1, -3, 3.5, 3"
         );
 
-        await user.click(screen.getByRole("button", { name: "Propose" }));
+        await user.click(screen.getByRole("button", { name: "Add products" }));
 
         expect(onPropose).toHaveBeenCalledWith([1, 2, 3]);
     });
@@ -69,13 +55,11 @@ describe("ProductProposalForm", () => {
         render(<ProductProposalForm onPropose={onPropose} />);
 
         await user.type(
-            screen.getByLabelText(
-                "Product IDs (separated by commas)"
-            ),
+            screen.getByLabelText("Product IDs"),
             "abc, -1, 0"
         );
 
-        await user.click(screen.getByRole("button", { name: "Propose" }));
+        await user.click(screen.getByRole("button", { name: "Add products" }));
 
         expect(onPropose).not.toHaveBeenCalled();
     });
@@ -87,13 +71,11 @@ describe("ProductProposalForm", () => {
         render(<ProductProposalForm onPropose={onPropose} />);
 
         await user.type(
-            screen.getByLabelText(
-                "Product IDs (separated by commas)"
-            ),
+            screen.getByLabelText("Product IDs"),
             "1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11"
         );
 
-        await user.click(screen.getByRole("button", { name: "Propose" }));
+        await user.click(screen.getByRole("button", { name: "Add products" }));
 
         expect(onPropose).not.toHaveBeenCalled();
     });

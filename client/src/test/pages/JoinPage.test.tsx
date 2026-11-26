@@ -27,7 +27,7 @@ describe("JoinPage", () => {
 
         expect(
             screen.getByRole("button", {
-                name: "Join"
+                name: "Join session"
             })
         ).toBeInTheDocument();
     });
@@ -44,7 +44,7 @@ describe("JoinPage", () => {
         );
 
         expect(
-            screen.getByText("Connection status: disconnected")
+            screen.getByText("disconnected")
         ).toBeInTheDocument();
 
         expect(
@@ -70,7 +70,7 @@ describe("JoinPage", () => {
         );
 
         await user.click(
-            screen.getByRole("button", { name: "Join" })
+            screen.getByRole("button", { name: "Join session" })
         );
 
         expect(onJoin).toHaveBeenCalledOnce();

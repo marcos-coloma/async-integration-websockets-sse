@@ -27,7 +27,7 @@ describe("ProductItem", () => {
         );
 
         expect(screen.getByRole("heading", { name: "Product One" })).toBeInTheDocument();
-        expect(screen.getByText("Price: $10")).toBeInTheDocument();
+        expect(screen.getByText("$10.00")).toBeInTheDocument();
         expect(screen.getByText("Proposed by: participant-1")).toBeInTheDocument();
         expect(screen.getByText("Votes: 3")).toBeInTheDocument();
         expect(screen.getByRole("img", { name: "Product One" })).toHaveAttribute("src", product.thumbnail);

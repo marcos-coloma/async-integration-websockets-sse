@@ -9,7 +9,7 @@ El backend tiene las rutas `/health` y `/events`, y el endpoint WebSocket `/ws`.
 ## Requisitos
 
 - Node.js LTS
-- npm
+- pnpm
 
 ## Instalación y ejecución
 
@@ -17,28 +17,28 @@ Instalá las dependencias en cada proyecto:
 
 ```bash
 cd server
-npm install
+pnpm install
 ```
 
 En otra terminal, desde la raíz:
 
 ```bash
 cd client
-npm install
+pnpm install
 ```
 
 Iniciá el backend en modo desarrollo:
 
 ```bash
 cd server
-npm run dev
+pnpm run dev
 ```
 
 Iniciá el frontend en otra terminal:
 
 ```bash
 cd client
-npm run dev
+pnpm run dev
 ```
 
 El backend escucha por defecto en `http://localhost:3000`; Vite informa la dirección local del frontend al iniciarse.
@@ -47,8 +47,8 @@ Para compilar e iniciar el backend:
 
 ```bash
 cd server
-npm run build
-npm start
+pnpm run build
+pnpm start
 ```
 
 ## Configuración del backend

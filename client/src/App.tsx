@@ -1,8 +1,10 @@
+
 import { useWebSockets } from "./hooks/useWebSockets";
 import { JoinPage } from "./pages/JoinPage";
 import { ParticipantsPage } from "./pages/ParticipantsPage";
+import { ScreenPage } from "./pages/ScreenPage";
 
-function App() {
+function ParticipantsApp() {
     const websocket = useWebSockets();
 
     if (!websocket.participantId) {
@@ -34,6 +36,14 @@ function App() {
             onRemoveProduct={websocket.removeProduct}
         />
     );
+}
+
+function App() {
+    if (window.location.pathname === "/screen") {
+        return <ScreenPage />;
+    }
+
+    return <ParticipantsApp />;
 }
 
 export default App;

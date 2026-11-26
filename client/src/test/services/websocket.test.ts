@@ -1,6 +1,6 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { WebSocketService } from "../services/websocket";
+import { WebSocketService } from "../../services/websocket";
 
 class MockWebSocket {
     static CONNECTING = 0;

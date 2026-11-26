@@ -2,8 +2,8 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { ProductList } from "../components/ProductList";
-import type { Participant, Product, Vote } from "../types/entities";
+import { ProductList } from "../../components/ProductList";
+import type { Participant, Product, Vote } from "../../types/entities";
 
 const products: Product[] = [
     {

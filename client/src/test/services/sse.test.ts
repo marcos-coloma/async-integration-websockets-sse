@@ -1,6 +1,6 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { SSEService } from "../services/sse";
+import { SSEService } from "../../services/sse";
 
 class MockEventSource {
     static instances: MockEventSource[] = [];

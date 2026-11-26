@@ -1,8 +1,8 @@
 
 import { describe, it, expect } from "vitest";
 import { render, screen, within } from "@testing-library/react";
-import { RankingList } from "../components/RankingList";
-import type { Product, Vote } from "../types/entities";
+import { RankingList } from "../../components/RankingList";
+import type { Product, Vote } from "../../types/entities";
 
 const products: Product[] = [
     {

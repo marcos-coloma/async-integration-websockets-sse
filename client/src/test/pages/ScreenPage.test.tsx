@@ -1,11 +1,11 @@
 
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
-import { ScreenPage } from "../pages/ScreenPage";
-import { useScreenEvents } from "../hooks/useScreenEvents";
-import type { SharedState } from "../types/entities";
+import { ScreenPage } from "../../pages/ScreenPage";
+import { useScreenEvents } from "../../hooks/useScreenEvents";
+import type { SharedState } from "../../types/entities";
 
-vi.mock("../hooks/useScreenEvents", () => ({
+vi.mock("../../hooks/useScreenEvents", () => ({
     useScreenEvents: vi.fn()
 }));
 

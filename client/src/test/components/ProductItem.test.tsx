@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { ProductItem } from "../components/ProductItem";
-import type { Product } from "../types/entities";
+import { ProductItem } from "../../components/ProductItem";
+import type { Product } from "../../types/entities";
 
 const product: Product = {
     id: 1,

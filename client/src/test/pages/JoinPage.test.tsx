@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { JoinPage } from "../pages/JoinPage";
+import { JoinPage } from "../../pages/JoinPage";
 
 describe("JoinPage", () => {
     it("should render the join form", () => {

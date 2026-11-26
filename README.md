@@ -1,143 +1,152 @@
 # Realtime Collaboration
 
-A real-time shared product list for group decisions. Participants join a session, propose products from DummyJSON, vote on products, and see the shared list update. A separate read-only screen displays the live ranking and connected participant count.
+A real-time collaborative application that allows multiple participants to build a shared product list, propose products, vote for their favorites, and view a live ranking.
 
-The application uses WebSocket for participant actions and updates, and Server-Sent Events (SSE) for the ranking screen. The server is the source of truth. Shared state is held in memory and is lost when the server stops; there is no database.
+Developed as part of **TP4 – Asynchronous Programming and Integration with Node.js and TypeScript**.
 
 ## Features
 
-- Join with a unique participant name and see who is connected.
-- Propose up to 10 catalog product IDs in one action. Valid products are added even if other IDs in the proposal fail.
-- Vote for and remove votes from products; the screen ranks products by vote count.
-- Remove products according to the proposer connection rule.
-- Keep the participant interface and read-only ranking screen synchronized in real time.
-- Expose a health endpoint.
-
-See [the protocol](docs/protocol.md) for message and event details, [functional decisions](docs/functional-decisions.md) for behavior rules, and [the data model](docs/data-model.md) for entities and in-memory state.
+- Join a shared session with a unique participant name.
+- View connected participants in real time.
+- Propose products from the DummyJSON catalog.
+- Process multiple product requests concurrently.
+- Handle partial failures and request timeouts.
+- Vote for products and remove votes.
+- Remove products according to ownership rules.
+- Display a live ranking ordered by vote count.
+- Synchronize participants through WebSocket.
+- Update the read-only ranking screen through Server-Sent Events (SSE).
 
 ## Technologies
 
 | Area | Technologies |
-| --- | --- |
-| Backend | Node.js, TypeScript, Express 5, `ws` |
-| Frontend | React 19, TypeScript, Vite |
-| Real-time transport | WebSocket and Server-Sent Events |
-| External catalog | DummyJSON |
+|---|---|
+| Backend | Node.js, TypeScript, Express |
+| Frontend | React, TypeScript, Vite |
+| Real-time communication | WebSocket, SSE |
+| External API | DummyJSON |
+| Testing | Vitest, React Testing Library |
+| Code quality | ESLint |
 | Package manager | pnpm |
-| State | In-memory repositories; no database |
+| CI | GitHub Actions |
 
 ## Architecture
 
-The backend composes HTTP, WebSocket, and SSE interfaces around the same Express application and Node HTTP server. Application services implement participant, product, and vote use cases through repository and catalog-provider contracts. The frontend is a separate Vite project; its production build is served as static files by Express.
+The project is divided into two applications:
 
-Participants use WebSocket to submit actions and receive shared state. The `/screen` page uses SSE to receive the initial state and later updates without sending actions. See [Architecture](docs/architecture.md) for layers, flows, and development modes.
+- `server/`: manages business logic, shared state, HTTP routes, WebSocket and SSE.
+- `client/`: provides the participant interface and the read-only ranking screen.
 
-## Relevant directory structure
+The backend is the single source of truth. Shared state is stored in memory, without a database.
+
+A single Express server serves the compiled frontend and handles all communication channels.
+
+## Project structure
 
 ```text
 .
 ├── .github/workflows/ci.yml
 ├── client/
-│   ├── src/
-│   │   ├── components/
-│   │   ├── hooks/
-│   │   ├── pages/
-│   │   ├── services/
-│   │   ├── test/
-│   │   └── types/
-│   ├── package.json
-│   └── pnpm-lock.yaml
+│   └── src/
+│       ├── components/
+│       ├── hooks/
+│       ├── pages/
+│       ├── services/
+│       └── types/
 ├── docs/
 │   ├── architecture.md
+│   ├── assignment.txt
 │   ├── data-model.md
 │   ├── functional-decisions.md
 │   └── protocol.md
 └── server/
-    ├── src/
-    │   ├── application/
-    │   ├── config/
-    │   ├── domain/
-    │   ├── infrastructure/
-    │   ├── interfaces/
-    │   └── index.ts
-    ├── package.json
-    └── pnpm-lock.yaml
+    └── src/
+        ├── application/
+        ├── config/
+        ├── domain/
+        ├── infrastructure/
+        └── interfaces/
 ```
 
-## Prerequisites
+## Requirements
 
-- Node.js 22 (the version used by CI).
-- pnpm 11.12.0.
+- Node.js 22
+- pnpm 11.12.0
 
-Each project has its own `package.json` and lockfile. Install dependencies in both directories:
+## Installation
+
+Install backend dependencies:
 
 ```bash
 cd server
 pnpm install
+```
 
+Install frontend dependencies:
+
+```bash
 cd ../client
 pnpm install
 ```
 
 ## Configuration
 
-The backend loads environment variables through `dotenv/config`. The following variables are read by the application:
+The backend supports the following environment variables:
 
-| Variable | Default | Purpose |
-| --- | --- | --- |
-| `PORT` | `3000` | Port for HTTP, WebSocket, and SSE. Must be a positive integer. |
-| `CATALOG_URL` | `https://dummyjson.com/products` | Base URL used to fetch catalog products. Must be a valid URL. |
-| `CATALOG_TIMEOUT_MS` | `5000` | Timeout for each catalog request, in milliseconds. Must be a positive integer. |
-| `CATALOG_DELAY_MS` | `0` | Optional delay, in milliseconds, added to DummyJSON requests for latency simulation. Must be a non-negative integer. |
+| Variable | Default | Description |
+|---|---|---|
+| `PORT` | `3000` | Server port. |
+| `CATALOG_URL` | `https://dummyjson.com/products` | External catalog URL. |
+| `CATALOG_TIMEOUT_MS` | `5000` | Catalog request timeout in milliseconds. |
+| `CATALOG_DELAY_MS` | `0` | Additional catalog request delay in milliseconds. |
 
-The frontend also supports these Vite variables:
+The frontend also supports optional `VITE_WS_URL` and `VITE_SSE_URL` variables to override the WebSocket and SSE endpoints.
 
-| Variable | Default behavior | Purpose |
-| --- | --- | --- |
-| `VITE_WS_URL` | In development, uses `ws://<current-host>:3000/ws` (or `wss` on HTTPS); in a production build, uses the current host and protocol. | Override the participant WebSocket URL. |
-| `VITE_SSE_URL` | In development, uses `http://<current-host>:3000/events`; in a production build, uses the current page origin. | Override the ranking screen SSE URL. |
+## Running the application
 
-Vite variables are embedded when the frontend is built. Set overrides before running `pnpm build`. If the backend development port differs from `3000`, configure the frontend URLs to point to that backend port.
+### Development mode
 
-## Run in development
-
-### Separate Vite and Express servers
-
-Install dependencies in both projects, then start the backend and frontend in separate terminals.
-
-Terminal 1:
+Run the backend:
 
 ```bash
 cd server
 pnpm dev
 ```
 
-Terminal 2:
+In a separate terminal, run the frontend:
 
 ```bash
 cd client
 pnpm dev
 ```
 
-Vite serves the frontend during development. The backend listens on port `3000` by default, and the frontend connects to it directly for WebSocket and SSE. If `PORT` is changed, set `VITE_WS_URL` and `VITE_SSE_URL` accordingly.
+By default, Vite runs on port `5173` and Express on port `3000`.
 
-### Integrated app on one server
+### Integrated mode
 
-Build the frontend first, then run the backend. Express serves the generated `client/dist` files; it does not build the frontend automatically.
+Build the frontend:
 
 ```bash
 cd client
 pnpm build
+```
 
-cd ../server
+Start the backend:
+
+```bash
+cd server
 pnpm dev
 ```
 
-Open the backend URL printed in the terminal, by default `http://localhost:3000`. Rebuild the frontend after frontend changes for the integrated server to serve the updated files.
+Open `http://localhost:3000`.
 
-## Build and run for production
+Express serves the compiled frontend from `client/dist`, while handling HTTP, WebSocket and SSE through the same server and port.
 
-Install dependencies in both projects, build the frontend, then compile and start the backend:
+Rebuild the frontend after making changes to its source code.
+
+### Production
+
+Build the frontend and backend:
 
 ```bash
 cd client
@@ -145,51 +154,78 @@ pnpm build
 
 cd ../server
 pnpm build
+```
+
+Start the server:
+
+```bash
 pnpm start
 ```
 
-The frontend build runs TypeScript project checks and Vite, generating static assets in `client/dist`. The backend build compiles TypeScript into `server/dist`; it does not build the frontend. The production server serves `client/dist` from the same host and port used for its HTTP, WebSocket, and SSE interfaces. Ensure `client/dist` exists before starting the backend.
+Make sure `client/dist` exists before starting the backend.
 
-## Routes and endpoints
+## Routes
 
-| Path | Purpose |
-| --- | --- |
+| Route | Description |
+|---|---|
 | `/` | Participant interface. |
-| `/screen` | Read-only live ranking screen. |
-| `/health` | HTTP health check; returns `{ "status": "ok" }`. |
-| `/events` | SSE connection for the ranking screen. |
-| `/ws` | WebSocket connection for participants. |
+| `/screen` | Live ranking screen. |
+| `/health` | Server health check. |
+| `/ws` | WebSocket connection. |
+| `/events` | Server-Sent Events connection. |
 
-In production, the browser uses the same host and port for the frontend, WebSocket, and SSE. The browser-side URL overrides are available for other deployments.
+## Testing and quality
 
-## Tests, lint, and builds
-
-Backend tests:
+Backend:
 
 ```bash
 cd server
 pnpm test
+pnpm run build
 ```
 
-Frontend lint, tests, and build:
+Frontend:
 
 ```bash
 cd client
-pnpm lint
 pnpm test
-pnpm build
+pnpm run lint
+pnpm run build
 ```
 
-The frontend also provides `pnpm test:watch` for running Vitest in watch mode. The backend package does not define a lint script.
+## Continuous Integration
 
-## Continuous integration
+GitHub Actions runs automatically on pushes and pull requests targeting `main`.
 
-`.github/workflows/ci.yml` runs on pushes and pull requests targeting `main`. It defines independent backend and frontend jobs, each using its own working directory, lockfile, and dependency installation. Both jobs use Node.js 22 and pnpm 11.12.0. The backend job runs tests and compiles TypeScript; the frontend job runs ESLint, Vitest, and the TypeScript/Vite build.
+The workflow includes two independent jobs:
 
-## Additional documentation
+- **Backend:** dependency installation, tests and TypeScript build.
+- **Frontend:** dependency installation, ESLint, tests and production build.
+
+## Evidence of use
+
+Application evidence will include:
+
+- A demonstration with multiple connected participants and the live ranking screen.
+- Product proposals with successful and failed catalog requests.
+- Voting and product removal.
+- Real-time synchronization through WebSocket and SSE.
+
+## Documentation
 
 - [Architecture](docs/architecture.md)
 - [Communication protocol](docs/protocol.md)
 - [Functional decisions](docs/functional-decisions.md)
 - [Data model](docs/data-model.md)
 - [Original assignment](docs/assignment.txt)
+
+## Limitations
+
+- Shared state is stored in memory and is lost when the server stops.
+- Only one shared session is supported per server instance.
+- Participant identity recovery after reconnection is not implemented.
+- No database or persistent storage is used.
+
+## License
+
+Developed for academic purposes as part of a university assignment.
